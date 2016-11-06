@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Controller
 @EnableAutoConfiguration
-class Hello {
+public class Hello {
 
     @RequestMapping("/")
     @ResponseBody
