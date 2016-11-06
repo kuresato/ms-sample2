@@ -104,10 +104,32 @@ gradle run
 Webブラウザで確認
 > http://localhost:8080/
 
-## S2I
+## Spring Boot Gradle plugin を使う
 
-これをビルドするとSpringBoot + Gradle のビルダーイメージになる？
-> https://github.com/jorgemoralespou/osev3-examples/tree/master/spring-boot/springboot-sti
+Spring Boot Gradle plugin
+> http://docs.spring.io/spring-boot/docs/current/reference/html/build-tool-plugins-gradle-plugin.html
+
+build.gradleを編集する
+
+apply plugin を以下の２個にする
+```
+apply plugin: 'java'
+apply plugin: "spring-boot"
+```
+
+buildScriptを追加する
+```
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:1.4.1.RELEASE")
+    }
+}
+```
+
+## S2I
 
 S2Iビルダーイメージの作り方
 How to Create an S2I Builder Image
@@ -122,4 +144,56 @@ S2I Project Repository
 
 OpenShift v3 と source-to-image (s2i)
 > http://qiita.com/nak3/items/6407c01cc2d1f153c0f1
+
+## Spring Boot 用の S2Iビルダーイメージ
+
+ここで公開されているビルダーイメージを使うとSpringBootのjarを組み込めそう
+> https://github.com/jorgemoralespou/s2i-java
+
+単にこのベースイメージを利用するだけなら以下のコマンドでイメージストリームに登録
+```
+oc create -f https://raw.githubusercontent.com/jorgemoralespou/s2i-java/master/ose3/s2i-java-imagestream.json
+```
+
+このベースイメージのビルドと、テンプレートを組み込むならこれ。
+s2i-javaのBuildConfig,ImageStreamと、Maven, Gradle用のサンプルが登録される
+```
+oc create -f https://raw.githubusercontent.com/jorgemoralespou/s2i-java/master/ose3/s2i-java-build_in_ose3.json
+```
+
+
+### 旧バージョン
+これをビルドするとSpringBoot + Gradle のビルダーイメージになる？
+> https://github.com/jorgemoralespou/osev3-examples/tree/master/spring-boot/springboot-sti
+よく見たらDepricatedって書いてあった
+
+
+# Origin
+
+### スタート on ec2
+
+```
+sudo -i
+cd /home/ubuntu/origin/openshift-origin-server-v1.3.1
+export PATH=$(pwd):$PATH
+./openshift start --public-master=https://localhost:8443
+
+export KUBECONFIG=`pwd`/openshift.local.config/master/admin.kubeconfig
+export CURL_CA_BUNDLE=`pwd`/openshift.local.config/master/ca.crt
+```
+
+### レジストリ追加(たぶん何かやり方間違ってる)
+```
+$ oadm registry --credentials=./openshift.local.config/master/openshift-registry.kubeconfig --service-account=registry
+
+$ echo \
+    '{"kind":"ServiceAccount","apiVersion":"v1","metadata":{"name":"registry"}}' \
+    | oc create -n default -f -
+
+$ oc edit scc privileged
+usersに以下を追加
+ - system:serviceaccount:default:registry
+
+$ oc volume deploymentconfigs/docker-registry --add --overwrite --name=registry-storage --mount-path=/registry --type=hostPath --path=/home/ubuntu/origin/registry
+```
 
